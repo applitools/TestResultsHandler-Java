@@ -135,6 +135,14 @@ public class ApplitoolsTestResultsHandler {
         this(testResults, viewkey, "", "", RunKey, WriteKey);
     }
 
+    public ApplitoolsTestResultsHandler(TestResults testResults, String viewkey) throws Exception {
+        this(testResults, viewkey, "", "");
+    }
+
+    public ApplitoolsTestResultsHandler(TestResults testResults, String viewkey, String RunKey) throws Exception {
+        this(testResults, viewkey, RunKey, "");
+    }
+
     public void acceptChanges(List<ResultStatus> desiredStatuses) {
         try {
             acceptChangesToSteps(this.stepsState, desiredStatuses);
@@ -545,11 +553,11 @@ public class ApplitoolsTestResultsHandler {
         return retUIDs;
     }
 
-    public void downloadAnimateGiff(String path) throws JSONException {
-        downloadAnimateGiff(path, DEFAULT_TIME_BETWEEN_FRAMES);
+    public void downloadAnimatedGif(String path) throws JSONException {
+        downloadAnimatedGif(path, DEFAULT_TIME_BETWEEN_FRAMES);
     }
 
-    public void downloadAnimateGiff(String path, int timeBetweenFramesMS) throws JSONException {
+    public void downloadAnimatedGif(String path, int timeBetweenFramesMS) throws JSONException {
 
         if (testResults.getMismatches() + testResults.getMatches() > 0) // only if the test isn't new and not all of his steps are missing
         {
@@ -568,7 +576,7 @@ public class ApplitoolsTestResultsHandler {
                         if (currentImagesURL[i] != null) list.add(curr.get(i));
                         if (baselineImagesURLS[i] != null) list.add(base.get(i));
                         if (diffImagesURL[i] != null) list.add(diff.get(i));
-                        String tempPath = preparePath(path) + "/" + (i + 1) + " - AnimatedGiff.gif";
+                        String tempPath = preparePath(path) + "/" + (i + 1) + " - AnimatedGif.gif";
                         createAnimatedGif(list, new File(tempPath), timeBetweenFramesMS);
                     } catch (IOException e) {
                         e.printStackTrace();

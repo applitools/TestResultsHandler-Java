@@ -72,7 +72,7 @@ public class DownloadDiffExample {
             testResultHandler.downloadBaselineImages(System.getenv("PathToDownloadImages"));      // Download only the Baseline images to the folder specified in Path.
             testResultHandler.downloadCurrentImages(System.getenv("PathToDownloadImages"));       // Download only the Current images to the folder specified in Path.
             testResultHandler.downloadDiffs(System.getenv("PathToDownloadImages"));                 // Download Diffs to the folder specified in Path.
-            testResultHandler.downloadAnimateGiff(System.getenv("PathToDownloadImages"));           // Download Animated GIf to the folder specified in Path.
+            testResultHandler.downloadAnimatedGif(System.getenv("PathToDownloadImages"));           // Download Animated GIf to the folder specified in Path.
 
             //Create a list of desired statuses to be automatically saved
             List<ResultStatus> desiredStatuses = new ArrayList<>();

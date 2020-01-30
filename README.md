@@ -29,9 +29,10 @@ Note: The Test Results Handler requires your account View Key - which can be fou
 ```
 
 ##### To initialize the Handler:
-
+```Java
 TestResults testResult= eyes.close(false);
 ApplitoolsTestResultsHandler testResultHandler= new ApplitoolsTestResultsHandler(testResult,viewKey);
+```
 
 ##### **downloadDiffs** -  Downloading the test images with the highlighted detected differences to a given directory. In case of New, Missing or passed step no image will be downloaded.
 ```Java
@@ -51,6 +52,11 @@ testResultHandler.downloadCurrentImages(Path_to_directory);
 ##### **downloadImages** - Downloading the test baseline image and current image to a given directory.
 ```Java
 testResultHandler.downloadImages(String Path_to_directory);
+```
+
+##### **downloadAnimatedGif** - Downloads a Gif of the Baseline Images, Current, and Diff images.
+```Java
+testResultHandler.downloadAnimatedGif(String Path_to_directory);
 ```
 
 ##### **setPathPrefix** -  Setting this path prefix will determine the structure of the repository for the download images

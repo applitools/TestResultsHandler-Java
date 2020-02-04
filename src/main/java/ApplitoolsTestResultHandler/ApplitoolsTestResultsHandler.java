@@ -2,7 +2,8 @@ package ApplitoolsTestResultHandler;
 
 import com.applitools.eyes.TestResults;
 import com.sun.glass.ui.Size;
-import org.apache.http.*;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpStatus;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -13,8 +14,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.protocol.HTTP;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -90,22 +89,22 @@ public class ApplitoolsTestResultsHandler {
     private int counter = 0;
 
 
-    public ApplitoolsTestResultsHandler(TestResults testResults, String viewkey, String ProxyServer, String ProxyPort, String ProxyUser, String ProxyPassword, String RunKey, String WriteKey) throws Exception {
+    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String proxyServer, String proxyPort, String proxyUser, String proxyPassword, String runKey, String writeKey) throws Exception {
 
-        if ((ProxyServer != "") && (ProxyPort != "")) {
-            proxy = new HttpHost(ProxyServer, Integer.parseInt(ProxyPort));
+        if ((proxyServer != null) && (proxyPort != null)) {
+            proxy = new HttpHost(proxyServer, Integer.parseInt(proxyPort));
         }
-        if ((ProxyPassword != "") && (ProxyUser != "")) {
-            Credentials credentials = new UsernamePasswordCredentials(ProxyUser, ProxyPassword);
-            AuthScope authScope = new AuthScope(ProxyServer, Integer.parseInt(ProxyPort));
+        if ((proxyPassword != null) && (proxyUser != null)) {
+            Credentials credentials = new UsernamePasswordCredentials(proxyUser, proxyPassword);
+            AuthScope authScope = new AuthScope(proxyServer, Integer.parseInt(proxyPort));
             credsProvider = new BasicCredentialsProvider();
 
             credsProvider.setCredentials(authScope, credentials);
         }
 
-        this.applitoolsViewKey = viewkey;
-        this.applitoolsRunKey = RunKey;
-        this.applitoolsWriteKey = WriteKey;
+        this.applitoolsViewKey = viewKey;
+        this.applitoolsRunKey = runKey;
+        this.applitoolsWriteKey = writeKey;
         this.testResults = testResults;
         Pattern pattern = Pattern.compile(RESULT_REGEX);
         Matcher matcher = pattern.matcher(testResults.getUrl());
@@ -127,25 +126,29 @@ public class ApplitoolsTestResultsHandler {
 
     }
 
-    public ApplitoolsTestResultsHandler(TestResults testResults, String viewkey, String ProxyServer, String ProxyPort, String RunKey, String WriteKey) throws Exception {
-        this(testResults, viewkey, ProxyServer, ProxyPort, "", "", RunKey, WriteKey);
+    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String ProxyServer, String ProxyPort, String runKey, String writeKey) throws Exception {
+        this(testResults, viewKey, ProxyServer, ProxyPort, null, null, runKey, writeKey);
     }
 
-    public ApplitoolsTestResultsHandler(TestResults testResults, String viewkey, String RunKey, String WriteKey) throws Exception {
-        this(testResults, viewkey, "", "", RunKey, WriteKey);
+    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String runKey, String writeKey) throws Exception {
+        this(testResults, viewKey, null, null, runKey, writeKey);
     }
 
-    public ApplitoolsTestResultsHandler(TestResults testResults, String viewkey) throws Exception {
-        this(testResults, viewkey, "", "");
+    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey) throws Exception {
+        this(testResults, viewKey, null, null);
     }
 
-    public ApplitoolsTestResultsHandler(TestResults testResults, String viewkey, String RunKey) throws Exception {
-        this(testResults, viewkey, RunKey, "");
+    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String runKey) throws Exception {
+        this(testResults, viewKey, runKey, null);
     }
 
     public void acceptChanges(List<ResultStatus> desiredStatuses) {
         try {
-            acceptChangesToSteps(this.stepsState, desiredStatuses);
+            if (this.applitoolsWriteKey != null) {
+                acceptChangesToSteps(this.stepsState, desiredStatuses);
+            } else {
+                throw new Error("No Write Key was provided to the Handler's constructor!");
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -228,8 +231,6 @@ public class ApplitoolsTestResultsHandler {
 
     private ResultStatus checkStepIfFailedOrUnresolved(int i) throws JSONException {
 
-//        if((this.testData.getString("status")!=null)&&(this.testData.getString("status").equals("Unresolved")))
-//            return ResultStatus.UNRESOLVED;
         if (getBugRegionsOfStep(i).length() == 0) {
             return ResultStatus.UNRESOLVED;
         } else {
@@ -238,7 +239,6 @@ public class ApplitoolsTestResultsHandler {
                 if (!(((JSONObject) (bugRegions.get(j))).getBoolean("isDisabled"))) {
                     return ResultStatus.FAILED;
                 }
-
             }
         }
         return ResultStatus.UNRESOLVED;
@@ -308,7 +308,6 @@ public class ApplitoolsTestResultsHandler {
 
         HttpsURLConnection.setDefaultSSLSocketFactory(new sun.security.ssl.SSLSocketFactoryImpl());
         CloseableHttpResponse response = null;
-//    HttpResponse response = null;
         HttpPost post = new HttpPost(url);
 
         post.setHeader("Accept", "application/json");
@@ -367,7 +366,8 @@ public class ApplitoolsTestResultsHandler {
                     response = runLongRequest(get);
                     InputStream is = response.getEntity().getContent();
                     try {
-                        images.add(ImageIO.read(is));
+                        BufferedImage image = ImageIO.read(is);
+                        images.add(image);
                     } catch (IOException e) {
                         e.printStackTrace();
                     } finally {
@@ -382,7 +382,6 @@ public class ApplitoolsTestResultsHandler {
                 } else {
                     images.add(null);
                 }
-
             }
         }
 
@@ -438,14 +437,14 @@ public class ApplitoolsTestResultsHandler {
             for (int i = 0; i < imagesList.size(); i++) {
                 if (null != imagesList.get(i)) {
                     String windowsCompatibleStepName = makeWindowsFileNameCompatible(stepsNames[i]);
-                    File outputfile = new File(String.format(IMAGE_TMPL, path, (i + 1), windowsCompatibleStepName, imageType));
+                    File outputFile = new File(String.format(IMAGE_TMPL, path, (i + 1), windowsCompatibleStepName, imageType));
                     try {
-                        ImageIO.write(imagesList.get(i), "jpg", outputfile);
+                        ImageIO.write(imagesList.get(i), "png", outputFile);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 } else {
-                    System.out.println("No " + imageType + " image was downloaded at step " + (i + 1) + "as this step status is " + resultStatus[i]);
+                    System.out.println("No " + imageType + " image was downloaded at step " + (i + 1) + " as this step status is " + resultStatus[i]);
                 }
 
             }
@@ -467,7 +466,7 @@ public class ApplitoolsTestResultsHandler {
                 InputStream is = response.getEntity().getContent();
                 try {
                     BufferedImage bi = ImageIO.read(is);
-                    ImageIO.write(bi, "jpg", new File(String.format(IMAGE_TMPL, path, (i + 1), windowsCompatibleStepName, imageType)));
+                    ImageIO.write(bi, "png", new File(String.format(IMAGE_TMPL, path, (i + 1), windowsCompatibleStepName, imageType)));
                 } finally {
                     if (null != is)
                         is.close();
@@ -506,7 +505,7 @@ public class ApplitoolsTestResultsHandler {
             if (imageIds[i] == null) {
                 URLS[i] = null;
             } else try {
-                URLS[i] = new URL(String.format("%s/api/images/%s?apiKey=%s", this.serverURL, imageIds[i], this.applitoolsViewKey, this.applitoolsViewKey));
+                URLS[i] = new URL(String.format("%s/api/images/%s?apiKey=%s", this.serverURL, imageIds[i], this.applitoolsViewKey));
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             }
@@ -595,7 +594,6 @@ public class ApplitoolsTestResultsHandler {
         CloseableHttpClient client = getCloseableHttpClient();
 
         CloseableHttpResponse response = null;
-//        response = client.execute(get);
         response = runLongRequest(get);
         InputStream stream = response.getEntity().getContent();
 
@@ -876,7 +874,7 @@ public class ApplitoolsTestResultsHandler {
     public CloseableHttpResponse longRequestCheckStatus(CloseableHttpResponse responseReceived) throws InterruptedException {
 
         int status = responseReceived.getStatusLine().getStatusCode();
-        HttpRequestBase response = null;
+        HttpRequestBase request = null;
         String URI;
 
         switch (status) {
@@ -885,14 +883,14 @@ public class ApplitoolsTestResultsHandler {
 
             case HttpStatus.SC_ACCEPTED:
                 URI = responseReceived.getFirstHeader("Location").getValue() + "?apiKey=" + this.applitoolsViewKey;
-                response = new HttpGet(URI);
-                response = createHttpRequest(response);
-                CloseableHttpResponse requestResponse = longRequestLoop(response, LONG_REQUEST_DELAY_MS);
+                request = new HttpGet(URI);
+                request = createHttpRequest(request);
+                CloseableHttpResponse requestResponse = longRequestLoop(request, LONG_REQUEST_DELAY_MS);
                 return longRequestCheckStatus(requestResponse);
             case HttpStatus.SC_CREATED:
                 URI = responseReceived.getFirstHeader("Location").getValue() + "?apiKey=" + this.applitoolsViewKey;
-                response = new HttpDelete(URI);
-                return sendRequest(response, 1, false);
+                request = new HttpDelete(URI);
+                return sendRequest(request, 1, false);
             case HttpStatus.SC_GONE:
                 throw new Error("The server task is gone");
             default:
@@ -917,6 +915,22 @@ public class ApplitoolsTestResultsHandler {
 
 
     public HttpRequestBase createHttpRequest(HttpRequestBase apiCall) {
+
+        try {
+            if (this.proxy != null) {
+                RequestConfig requestConfig = RequestConfig.custom()
+                        .setProxy(this.proxy)
+                        .build();
+                apiCall.setConfig(requestConfig);
+            }
+            return apiCall;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public HttpRequestBase createHttpRequestWithHeaders(HttpRequestBase apiCall) {
 
         Calendar calendar = Calendar.getInstance();
         SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");

@@ -906,10 +906,10 @@ public class ApplitoolsTestResultsHandler {
 
         Thread.sleep(delay);
         CloseableHttpResponse response = sendRequest(options, 1, false);
-        if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
-            return response;
+        if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+            return longRequestLoop(options, delay);
         }
-        return longRequestLoop(options, delay);
+        return response;
     }
 
 

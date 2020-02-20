@@ -1,5 +1,5 @@
 # ApplitoolsTestResultsHandler - Java
-### v2.0.1
+### v2.0.2
 
 The Applitools Test Results Handler extends the capabilities of TestResults with additional API calls.
 With these additional API calls you will be able to retrive additional details at the end of the test.
@@ -32,6 +32,14 @@ Note: The Test Results Handler requires your account View Key - which can be fou
 ```Java
 TestResults testResult= eyes.close(false);
 ApplitoolsTestResultsHandler testResultHandler= new ApplitoolsTestResultsHandler(testResult,viewKey);
+
+//Proxy Configuration
+TestResults testResult= eyes.close(false);
+ApplitoolsTestResultsHandler testResultHandler= new ApplitoolsTestResultsHandler(testResult, viewKey, proxyServer, proxyPort);
+
+//Proxy Configuration with Username and Password
+TestResults testResult= eyes.close(false);
+ApplitoolsTestResultsHandler testResultHandler= new ApplitoolsTestResultsHandler(testResult, viewKey, proxyServer, proxyPort, proxyUser, proxyPassword);
 ```
 
 ##### **downloadDiffs** -  Downloading the test images with the highlighted detected differences to a given directory. In case of New, Missing or passed step no image will be downloaded.

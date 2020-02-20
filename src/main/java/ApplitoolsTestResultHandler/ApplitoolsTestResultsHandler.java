@@ -1,4 +1,4 @@
-package ApplitoolsTestResultHandler;
+package TestResultsHandler;
 
 import com.applitools.eyes.TestResults;
 import com.sun.glass.ui.Size;
@@ -89,22 +89,21 @@ public class ApplitoolsTestResultsHandler {
     private int counter = 0;
 
 
-    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String proxyServer, String proxyPort, String proxyUser, String proxyPassword, String runKey, String writeKey) throws Exception {
+    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String proxyServer, String proxyPort, String proxyUser, String proxyPassword) throws Exception {
 
         if ((proxyServer != null) && (proxyPort != null)) {
-            proxy = new HttpHost(proxyServer, Integer.parseInt(proxyPort));
-        }
-        if ((proxyPassword != null) && (proxyUser != null)) {
-            Credentials credentials = new UsernamePasswordCredentials(proxyUser, proxyPassword);
-            AuthScope authScope = new AuthScope(proxyServer, Integer.parseInt(proxyPort));
-            credsProvider = new BasicCredentialsProvider();
+            if ((proxyPassword != null) && (proxyUser != null)) {
+                Credentials credentials = new UsernamePasswordCredentials(proxyUser, proxyPassword);
+                AuthScope authScope = new AuthScope(proxyServer, Integer.parseInt(proxyPort));
+                credsProvider = new BasicCredentialsProvider();
 
-            credsProvider.setCredentials(authScope, credentials);
+                credsProvider.setCredentials(authScope, credentials);
+            }
+            else {
+                proxy = new HttpHost(proxyServer, Integer.parseInt(proxyPort));
+            }
         }
-
         this.applitoolsViewKey = viewKey;
-        this.applitoolsRunKey = runKey;
-        this.applitoolsWriteKey = writeKey;
         this.testResults = testResults;
         Pattern pattern = Pattern.compile(RESULT_REGEX);
         Matcher matcher = pattern.matcher(testResults.getUrl());
@@ -126,28 +125,21 @@ public class ApplitoolsTestResultsHandler {
 
     }
 
-    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String ProxyServer, String ProxyPort, String runKey, String writeKey) throws Exception {
-        this(testResults, viewKey, ProxyServer, ProxyPort, null, null, runKey, writeKey);
-    }
-
-    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String runKey, String writeKey) throws Exception {
-        this(testResults, viewKey, null, null, runKey, writeKey);
+    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String proxyServer, String proxyPort) throws Exception {
+        this(testResults, viewKey, proxyServer, proxyPort, null, null);
     }
 
     public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey) throws Exception {
-        this(testResults, viewKey, null, null);
+        this(testResults, viewKey, null, null, null, null);
     }
 
-    public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String runKey) throws Exception {
-        this(testResults, viewKey, runKey, null);
-    }
-
-    public void acceptChanges(List<ResultStatus> desiredStatuses) {
+    public void acceptChanges(List<ResultStatus> desiredStatuses, String writeKey) {
         try {
-            if (this.applitoolsWriteKey != null) {
+            if (writeKey != null) {
+                this.applitoolsWriteKey = writeKey;
                 acceptChangesToSteps(this.stepsState, desiredStatuses);
             } else {
-                throw new Error("No Write Key was provided to the Handler's constructor!");
+                throw new Error("No Write Key was provided to the function!");
             }
         } catch (Exception e) {
             e.printStackTrace();

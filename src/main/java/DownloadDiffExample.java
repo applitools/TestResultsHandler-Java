@@ -45,16 +45,14 @@ public class DownloadDiffExample {
             System.out.println("This is the link for the Batch Result: " + testResult.getUrl());
 
             //Constructor to use without proxy configuration
-            ApplitoolsTestResultsHandler testResultHandler = new ApplitoolsTestResultsHandler(testResult,
-                    System.getenv("APPLITOOLS_VIEW_KEY"), System.getenv("APPLITOOLS_API_KEY"), System.getenv("APPLITOOLS_WRITE_KEY"));
+            ApplitoolsTestResultsHandler testResultHandler = new ApplitoolsTestResultsHandler(testResult, System.getenv("APPLITOOLS_VIEW_KEY"));
 
             //Constructor to use if using a proxy with a server URL and a Port.
-//            ApplitoolsTestResultsHandler testResultHandler = new ApplitoolsTestResultsHandler(testResult,
-//            System.getenv("APPLITOOLS_VIEW_KEY"),"ProxyServerURL","ProxyServerPort", System.getenv("APPLITOOLS_API_KEY"), System.getenv("APPLITOOLS_WRITE_KEY"));
+//            ApplitoolsTestResultsHandler testResultHandler = new ApplitoolsTestResultsHandler(testResult, System.getenv("APPLITOOLS_VIEW_KEY"),"ProxyServerURL","ProxyServerPort");
 
             //Constructor to use if using a proxy with a server URL and a Port, and username and password
 //            ApplitoolsTestResultsHandler testResultHandler = new ApplitoolsTestResultsHandler(testResult,
-//            System.getenv("APPLITOOLS_VIEW_KEY"),"ProxyServerURL","ProxyServerPort","ProxyServerUserName","ProxyServerPassword", System.getenv("APPLITOOLS_API_KEY"), System.getenv("APPLITOOLS_WRITE_KEY"));
+//            System.getenv("APPLITOOLS_VIEW_KEY"),"ProxyServerURL","ProxyServerPort","ProxyServerUserName","ProxyServerPassword");
 
 
             List<BufferedImage>  base = testResultHandler.getBaselineBufferedImages();  // get Baseline Images as BufferedImage
@@ -79,8 +77,8 @@ public class DownloadDiffExample {
             desiredStatuses.add(ResultStatus.NEW);
             desiredStatuses.add(ResultStatus.PASSED);
 
-            //Accepting changes to steps with the desired statuses
-            testResultHandler.acceptChanges(desiredStatuses);
+            //Accepting changes to steps with the desired statuses, requires a write key
+            // testResultHandler.acceptChanges(desiredStatuses, System.getenv("APPLITOOLS_WRITE_KEY"));
 
             //Get Steps Names
             String[] names = testResultHandler.getStepsNames();

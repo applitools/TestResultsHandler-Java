@@ -882,6 +882,7 @@ public class ApplitoolsTestResultsHandler {
             case HttpStatus.SC_CREATED:
                 URI = responseReceived.getFirstHeader("Location").getValue() + "?apiKey=" + this.applitoolsViewKey;
                 request = new HttpDelete(URI);
+                request = createHttpRequest(request);
                 return sendRequest(request, 1, false);
             case HttpStatus.SC_GONE:
                 throw new Error("The server task is gone");

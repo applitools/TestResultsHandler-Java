@@ -261,18 +261,6 @@ public class ApplitoolsTestResultsHandler {
         return StepsNames;
     }
 
-    private CloseableHttpClient getCloseableHttpClient() {
-        CloseableHttpClient client;
-        if (proxy == null) {
-            client = HttpClientBuilder.create().build();
-        } else if (credsProvider == null) {
-            client = HttpClientBuilder.create().setProxy(proxy).build();
-        } else {
-            client = HttpClientBuilder.create().setProxy(proxy).setDefaultCredentialsProvider(credsProvider).build();
-        }
-        return client;
-    }
-
     private String readJsonStringFromUrl(String url) throws Exception {
 
         HttpsURLConnection.setDefaultSSLSocketFactory(new sun.security.ssl.SSLSocketFactoryImpl());
@@ -280,7 +268,7 @@ public class ApplitoolsTestResultsHandler {
         HttpGet get = new HttpGet(url);
 
         CloseableHttpClient client = getCloseableHttpClient();
-        response = runLongRequest(get);
+        response = runLongRequest(client, get);
         InputStream is = response.getEntity().getContent();
         try {
             BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
@@ -309,7 +297,7 @@ public class ApplitoolsTestResultsHandler {
 
         CloseableHttpClient client = getCloseableHttpClient();
 
-        response = runLongRequest(post);
+        response = runLongRequest(client, post);
 
         InputStream is = response.getEntity().getContent();
         try {
@@ -354,7 +342,7 @@ public class ApplitoolsTestResultsHandler {
                     CloseableHttpResponse response = null;
                     HttpGet get = new HttpGet(urls[i].toString());
                     CloseableHttpClient client = getCloseableHttpClient();
-                    response = runLongRequest(get);
+                    response = runLongRequest(client, get);
                     InputStream is = response.getEntity().getContent();
                     try {
                         BufferedImage image = ImageIO.read(is);
@@ -453,7 +441,7 @@ public class ApplitoolsTestResultsHandler {
                 HttpGet get = new HttpGet(imageURLS[i].toString());
                 CloseableHttpClient client = getCloseableHttpClient();
 
-                response = runLongRequest(get);
+                response = runLongRequest(client, get);
                 InputStream is = response.getEntity().getContent();
                 try {
                     BufferedImage bi = ImageIO.read(is);
@@ -585,7 +573,7 @@ public class ApplitoolsTestResultsHandler {
         CloseableHttpClient client = getCloseableHttpClient();
 
         CloseableHttpResponse response = null;
-        response = runLongRequest(get);
+        response = runLongRequest(client, get);
         InputStream stream = response.getEntity().getContent();
 
         try {
@@ -829,17 +817,16 @@ public class ApplitoolsTestResultsHandler {
         return this.testData.getJSONObject("startInfo").getJSONObject("environment").optString("hostingApp");
     }
 
-    public CloseableHttpResponse runLongRequest(HttpRequestBase apiCall) throws InterruptedException {
+    public CloseableHttpResponse runLongRequest(CloseableHttpClient client, HttpRequestBase apiCall) throws InterruptedException {
         HttpRequestBase requestBase = createHttpRequest(apiCall);
-        CloseableHttpResponse response = sendRequest(requestBase, 1, false);
+        CloseableHttpResponse response = sendRequest(client, requestBase, 1, false);
         return longRequestCheckStatus(response);
     }
 
-    public CloseableHttpResponse sendRequest(HttpRequestBase apiCall, int retry, boolean delayBeforeRetry) throws InterruptedException {
+    public CloseableHttpResponse sendRequest(CloseableHttpClient client, HttpRequestBase apiCall, int retry, boolean delayBeforeRetry) throws InterruptedException {
         counter += 1;
         String requestId = counter + "--" + UUID.randomUUID();
         apiCall.addHeader("x-applitools-eyes-client-request-id", requestId);
-        CloseableHttpClient client = HttpClientBuilder.create().build();
         CloseableHttpResponse response;
 
         try {
@@ -852,9 +839,9 @@ public class ApplitoolsTestResultsHandler {
             if (retry > 0) {
                 if (delayBeforeRetry) {
                     Thread.sleep(RETRY_REQUEST_INTERVAL);
-                    return sendRequest(apiCall, retry - 1, delayBeforeRetry);
+                    return sendRequest(client, apiCall, retry - 1, delayBeforeRetry);
                 }
-                return sendRequest(apiCall, retry - 1, delayBeforeRetry);
+                return sendRequest(client, apiCall, retry - 1, delayBeforeRetry);
             }
             throw new Error(errorMessage);
         }
@@ -882,7 +869,7 @@ public class ApplitoolsTestResultsHandler {
                 URI = responseReceived.getFirstHeader("Location").getValue() + "?apiKey=" + this.applitoolsViewKey;
                 request = new HttpDelete(URI);
                 request = createHttpRequest(request);
-                return sendRequest(request, 1, false);
+                return sendRequest(getCloseableHttpClient(), request, 1, false);
             case HttpStatus.SC_GONE:
                 throw new Error("The server task is gone");
             default:
@@ -897,14 +884,24 @@ public class ApplitoolsTestResultsHandler {
         System.out.println("Still running... Retrying in " + delay);
 
         Thread.sleep(delay);
-        CloseableHttpResponse response = sendRequest(options, 1, false);
+        CloseableHttpResponse response = sendRequest(getCloseableHttpClient(), options, 1, false);
         if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
             return longRequestLoop(options, delay);
         }
         return response;
     }
 
-
+    private CloseableHttpClient getCloseableHttpClient() {
+        CloseableHttpClient client;
+        if (proxy == null) {
+            client = HttpClientBuilder.create().build();
+        } else if (credsProvider == null) {
+            client = HttpClientBuilder.create().setProxy(proxy).build();
+        } else {
+            client = HttpClientBuilder.create().setProxy(proxy).setDefaultCredentialsProvider(credsProvider).build();
+        }
+        return client;
+    }
 
     public HttpRequestBase createHttpRequest(HttpRequestBase apiCall) {
 

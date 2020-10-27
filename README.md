@@ -1,5 +1,5 @@
 # ApplitoolsTestResultsHandler - Java
-### v2.0.3
+### v2.0.4
 
 The Applitools Test Results Handler extends the capabilities of TestResults with additional API calls.
 With these additional API calls you will be able to retrive additional details at the end of the test.

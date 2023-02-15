@@ -1,3 +1,5 @@
+package com.applitools.eyes.results.handler.example;
+
 import ApplitoolsTestResultHandler.ApplitoolsTestResultsHandler;
 import ApplitoolsTestResultHandler.ResultStatus;
 import com.applitools.eyes.RectangleSize;
@@ -6,7 +8,6 @@ import com.applitools.eyes.TestResults;
 import com.applitools.eyes.selenium.Eyes;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -14,7 +15,8 @@ import java.util.List;
 
 public class DownloadDiffExample {
 
-    public static void main(String[] args) throws Exception {
+    // TODO - convert this into a JUnit test so it's clear this isn't intended to be used as a CLI command
+    public static void main(String[] foo) throws Exception {
 
         WebDriver driver = new ChromeDriver();
         Eyes eyes = new Eyes();
@@ -86,7 +88,7 @@ public class DownloadDiffExample {
             //Get the status of each step (Pass / Unresolved / New / Missing).
             ResultStatus[] results = testResultHandler.calculateStepResults();
             for (int i=0 ; i< results.length; i++){
-                System.out.println("The result of step "+(i+1)+" is "+ results[i]);
+                System.out.println("The result of step "+(i+1)+"/"+results.length + " " + names[i] + " is "+ results[i]);
             }
 
         }

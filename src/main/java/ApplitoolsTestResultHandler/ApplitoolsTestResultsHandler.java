@@ -1,7 +1,6 @@
-package TestResultsHandler;
+package ApplitoolsTestResultHandler;
 
 import com.applitools.eyes.TestResults;
-import com.sun.glass.ui.Size;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpStatus;
 import org.apache.http.auth.AuthScope;
@@ -10,6 +9,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -23,7 +23,14 @@ import javax.imageio.metadata.IIOMetadata;
 import javax.imageio.metadata.IIOMetadataNode;
 import javax.imageio.stream.FileImageOutputStream;
 import javax.imageio.stream.ImageOutputStream;
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.cert.X509Certificate;
+
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.*;
@@ -37,7 +44,8 @@ import java.util.regex.Pattern;
 
 public class ApplitoolsTestResultsHandler {
 
-    private static final String VERSION = "1.3.3";
+    @SuppressWarnings("unused")
+    private static final String VERSION = "1.3.4";
     protected static final String STEP_RESULT_API_FORMAT = "/api/sessions/batches/%s/%s/?ApiKey=%s&format=json";
     private static final String RESULT_REGEX = "(?<serverURL>^.+)\\/app\\/batches\\/(?<batchId>\\d+)\\/(?<sessionId>\\d+).*$";
     private static final String IMAGE_TMPL = "%s/step %s %s-%s.png";
@@ -48,10 +56,36 @@ public class ApplitoolsTestResultsHandler {
     private static final int RETRY_REQUEST_INTERVAL = 500; // ms
     private static final int LONG_REQUEST_DELAY_MS = 2000; // ms
     private static final int MAX_LONG_REQUEST_DELAY_MS = 10000; // ms
-    private static final int DEFAULT_TIMEOUT_MS = 300000; // ms (5 min)
-    private static final int REDUCED_TIMEOUT_MS = 15000; // ms (15 sec)
     private static final double LONG_REQUEST_DELAY_MULTIPLICATIVE_INCREASE_FACTOR = 1.5;
+    
+    private static final Charset UTF8 = Charset.forName("UTF-8");
 
+    private static X509TrustManager xtm = new X509TrustManager() {
+        
+        @Override
+        public void checkClientTrusted(X509Certificate[] arg0, String arg1) {
+            return;
+        }
+        
+        @Override
+        public void checkServerTrusted(X509Certificate[] arg0, String arg1) {
+            return;
+        }
+
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+            return null;
+        }
+    };
+
+    private static TrustManager tm[] = { xtm };
+    
+    private static HostnameVerifier hv = new HostnameVerifier() {
+        @Override
+        public boolean verify(String hostname, SSLSession session) {
+            return true;
+        }
+    };
 
     protected String applitoolsRunKey;
     protected String applitoolsViewKey;
@@ -210,12 +244,12 @@ public class ApplitoolsTestResultsHandler {
                 String payload = String.format("{\"updates\":[{\"id\":\"%s\",\"batchId\":\"%s\",\"stepUpdates\":[{\"index\":%d,\"replaceExpected\":true}]}]}",
                         this.sessionID, this.batchID, i);
 
-                String json = postJsonToURL(url, payload);
+                postJsonToURL(url, payload);
                 url = String.format(serverURL + UPDATE_SESSIONS_BASELINES, this.batchID);
                 url = url + "?accountId=" + this.accountID + "&apiKey=" + this.applitoolsWriteKey;
                 payload = String.format("{\"ids\":[\"%s\"]}",
                         this.sessionID);
-                json = postJsonToURL(url, payload);
+                postJsonToURL(url, payload);
             }
         }
 
@@ -273,10 +307,17 @@ public class ApplitoolsTestResultsHandler {
             client = HttpClientBuilder.create().build();
         return client;
     }
+    
+    private void initHttpsURLConnection() throws Exception {
+        SSLContext ctx = SSLContext.getInstance("SSL");
+        ctx.init(null, tm, null);
+        HttpsURLConnection.setDefaultSSLSocketFactory(ctx.getSocketFactory());
+        HttpsURLConnection.setDefaultHostnameVerifier(hv);
+    }
 
     private String readJsonStringFromUrl(String url) throws Exception {
-
-        HttpsURLConnection.setDefaultSSLSocketFactory(new sun.security.ssl.SSLSocketFactoryImpl());
+        
+        initHttpsURLConnection();
         CloseableHttpResponse response = null;
         HttpGet get = new HttpGet(url);
 
@@ -284,7 +325,7 @@ public class ApplitoolsTestResultsHandler {
         response = runLongRequest(get);
         InputStream is = response.getEntity().getContent();
         try {
-            BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is, UTF8));
             return readAll(rd);
         } finally {
             if (null != is)
@@ -298,14 +339,14 @@ public class ApplitoolsTestResultsHandler {
 
     private String postJsonToURL(String url, String payload) throws Exception {
 
-        HttpsURLConnection.setDefaultSSLSocketFactory(new sun.security.ssl.SSLSocketFactoryImpl());
+        initHttpsURLConnection();
         CloseableHttpResponse response = null;
         HttpPost post = new HttpPost(url);
 
         post.setHeader("Accept", "application/json");
         post.setHeader("Content-Type", "application/json");
 
-        StringEntity entity = new StringEntity(payload, "application/json", "utf-8");
+        StringEntity entity = new StringEntity(payload, ContentType.APPLICATION_JSON.withCharset(UTF8));
         post.setEntity(entity);
 
         CloseableHttpClient client = getCloseableHttpClient();
@@ -314,7 +355,7 @@ public class ApplitoolsTestResultsHandler {
 
         InputStream is = response.getEntity().getContent();
         try {
-            BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is, UTF8));
             return readAll(rd);
 
         } finally {
@@ -351,7 +392,6 @@ public class ApplitoolsTestResultsHandler {
             for (int i = 0; i < urls.length; i++) {
                 if (null != urls[i]) {
 
-                    String windowsCompatibleStepName = makeWindowsFileNameCompatible(stepsNames[i]);
                     CloseableHttpResponse response = null;
                     HttpGet get = new HttpGet(urls[i].toString());
                     CloseableHttpClient client = getCloseableHttpClient();
@@ -443,7 +483,8 @@ public class ApplitoolsTestResultsHandler {
         }
     }
 
-    private void saveImagesInFolder(String path, String imageType, URL[] imageURLS) throws InterruptedException, IOException, JSONException {
+    // Unused private method.
+    /*private void saveImagesInFolder(String path, String imageType, URL[] imageURLS) throws InterruptedException, IOException, JSONException {
         for (int i = 0; i < imageURLS.length; i++) {
             if (imageURLS[i] == null) {
                 System.out.println("No " + imageType + " image in step " + (i + 1) + ": " + stepsNames[i]);
@@ -470,7 +511,7 @@ public class ApplitoolsTestResultsHandler {
 
             }
         }
-    }
+    }*/
 
     private String makeWindowsFileNameCompatible(String stepName) {
         stepName = stepName.replace('/', '~');
@@ -590,7 +631,7 @@ public class ApplitoolsTestResultsHandler {
         InputStream stream = response.getEntity().getContent();
 
         try {
-            BufferedReader rd = new BufferedReader(new InputStreamReader(stream, Charset.forName("UTF-8")));
+            BufferedReader rd = new BufferedReader(new InputStreamReader(stream, UTF8));
             return readAll(rd);
         } finally {
             if (null != stream)
@@ -601,12 +642,38 @@ public class ApplitoolsTestResultsHandler {
                 response.close();
         }
     }
+    
+    private static class Rectangle {
+        int height;
+        int width;
+        
+        Rectangle(int width, int height) {
+            this.width = width;
+            this.height = height;
+        }
+        
+        Rectangle() {
+            this(0,0);
+        }
+        
+        Rectangle(BufferedImage i) {
+            this(i.getWidth(), i.getHeight());
+        }
+        
+        static Rectangle maxDimensions(Rectangle a, Rectangle b) {
+            return new Rectangle(Integer.max(a.width, b.width), Integer.max(a.height, b.height));
+        }
+        
+        static Rectangle maxDimensionsOf(List<BufferedImage> images) {
+            return images.stream().map(Rectangle::new).reduce(new Rectangle(), Rectangle::maxDimensions);
+        }
+    }
 
     private static void createAnimatedGif(List<BufferedImage> images, File target, int timeBetweenFramesMS) throws IOException {
         ImageOutputStream output = new FileImageOutputStream(target);
         GifSequenceWriter writer = null;
 
-        Size max = getMaxSize(images);
+        Rectangle max = Rectangle.maxDimensionsOf(images);
 
         try {
             for (BufferedImage image : images) {
@@ -619,15 +686,6 @@ public class ApplitoolsTestResultsHandler {
             writer.close();
             output.close();
         }
-    }
-
-    private static Size getMaxSize(List<BufferedImage> images) {
-        Size max = new Size(0, 0);
-        for (BufferedImage image : images) {
-            if (max.height < image.getHeight()) max.height = image.getHeight();
-            if (max.width < image.getWidth()) max.width = image.getWidth();
-        }
-        return max;
     }
 
     private static class GifSequenceWriter {
@@ -770,6 +828,7 @@ public class ApplitoolsTestResultsHandler {
          * boolean loopContinuously) {
          */
 
+        @SuppressWarnings("unused")
         public static void main(String[] args) throws Exception {
             if (args.length > 1) {
                 // grab the output image type from the first image in the sequence

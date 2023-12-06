@@ -98,5 +98,7 @@ public class DownloadDiffExample {
             eyes.abortIfNotClosed();
             driver.close();
         }
+        
+        System.exit(0);
     }
 }

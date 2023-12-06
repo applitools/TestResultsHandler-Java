@@ -126,15 +126,13 @@ public class ApplitoolsTestResultsHandler {
     public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String proxyServer, String proxyPort, String proxyUser, String proxyPassword) throws Exception {
 
         if ((proxyServer != null) && (proxyPort != null)) {
+            proxy = new HttpHost(proxyServer, Integer.parseInt(proxyPort));
             if ((proxyPassword != null) && (proxyUser != null)) {
                 Credentials credentials = new UsernamePasswordCredentials(proxyUser, proxyPassword);
                 AuthScope authScope = new AuthScope(proxyServer, Integer.parseInt(proxyPort));
                 credsProvider = new BasicCredentialsProvider();
 
                 credsProvider.setCredentials(authScope, credentials);
-            }
-            else {
-                proxy = new HttpHost(proxyServer, Integer.parseInt(proxyPort));
             }
         }
         this.applitoolsViewKey = viewKey;
@@ -299,12 +297,13 @@ public class ApplitoolsTestResultsHandler {
 
     private CloseableHttpClient getCloseableHttpClient() {
         CloseableHttpClient client = null;
-        if (proxy != null)
-            client = HttpClientBuilder.create().setProxy(proxy).build();
-        else if (credsProvider != null)
-            client = HttpClientBuilder.create().setProxy(proxy).setDefaultCredentialsProvider(credsProvider).build();
-        else
+        if (proxy == null) {
             client = HttpClientBuilder.create().build();
+        } else if (credsProvider == null) {
+            client = HttpClientBuilder.create().setProxy(proxy).build();
+        } else {
+            client = HttpClientBuilder.create().setProxy(proxy).setDefaultCredentialsProvider(credsProvider).build();
+        }
         return client;
     }
     
@@ -899,7 +898,7 @@ public class ApplitoolsTestResultsHandler {
         counter += 1;
         String requestId = counter + "--" + UUID.randomUUID();
         apiCall.addHeader("x-applitools-eyes-client-request-id", requestId);
-        CloseableHttpClient client = HttpClientBuilder.create().build();
+        CloseableHttpClient client = getCloseableHttpClient();
         CloseableHttpResponse response;
 
         try {

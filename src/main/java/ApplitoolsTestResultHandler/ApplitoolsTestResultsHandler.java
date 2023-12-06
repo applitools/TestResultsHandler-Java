@@ -126,7 +126,7 @@ public class ApplitoolsTestResultsHandler {
     public ApplitoolsTestResultsHandler(TestResults testResults, String viewKey, String proxyServer, String proxyPort, String proxyUser, String proxyPassword) throws Exception {
 
         if ((proxyServer != null) && (proxyPort != null)) {
-        	proxy = new HttpHost(proxyServer, Integer.parseInt(proxyPort));
+            proxy = new HttpHost(proxyServer, Integer.parseInt(proxyPort));
             if ((proxyPassword != null) && (proxyUser != null)) {
                 Credentials credentials = new UsernamePasswordCredentials(proxyUser, proxyPassword);
                 AuthScope authScope = new AuthScope(proxyServer, Integer.parseInt(proxyPort));
